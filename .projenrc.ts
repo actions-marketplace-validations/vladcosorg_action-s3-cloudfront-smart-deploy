@@ -1,91 +1,45 @@
-import { GithubAction, RunsUsing } from '@vladcos/projen-base'
-import { JobPermission } from 'projen/lib/github/workflows-model'
-import { TypeScriptModuleResolution } from 'projen/lib/javascript'
+import { GithubAction, RunsUsing } from '@vladcos/projen-github-action'
+
+import { createAwsStep } from '@/.projenrc/createAwsStep'
+import { addTestJob } from '@/.projenrc/test-workflow'
+
+import type { JobStep } from 'projen/lib/github/workflows-model'
+import type { RenderWorkflowSetupOptions } from 'projen/lib/javascript'
 
 const project = new (class extends GithubAction {
   override preSynthesize() {
     super.preSynthesize()
-    this.addGitIgnore('!/dist/')
-    this.package.addField('type', 'module')
-    const testJob = 'test_list'
-    this.release?.addJobs({
-      [testJob]: {
-        permissions: {
-          contents: JobPermission.READ,
-          idToken: JobPermission.WRITE,
-        },
-        runsOn: ['ubuntu-latest'],
-        env: {
-          CI: 'true',
-        },
-        steps: [
-          { uses: 'actions/checkout@v3' },
-          {
-            name: 'Configure AWS credentials',
-            uses: 'aws-actions/configure-aws-credentials@v2',
-            with: {
-              'role-to-assume': '${{ vars.AWS_ROLE }}',
-              'aws-region': '${{ vars.AWS_REGION }}',
-            },
-          },
-          {
-            run: [
-              'mkdir ${{ runner.temp }}/test/',
-              'touch ${{ runner.temp }}/test/foo.bar',
-            ].join('\n'),
-          },
-          {
-            uses: './',
-            with: {
-              'from-local-path': '${{ runner.temp }}/test',
-              'to-s3-uri': 's3://${{ vars.AWS_BUCKET }}/',
-              'distribution-id': '${{ vars.AWS_DISTRIBUTION }}',
-            },
-          },
-          {
-            run: ['aws s3 rm s3://${{ vars.AWS_BUCKET }}/ --recursive'].join(
-              '\n',
-            ),
-          },
-        ],
-      },
-    })
-
-    const releaseWorkflowFile = this.tryFindObjectFile(
+    const releaseWorkflowFile = project.tryFindObjectFile(
       '.github/workflows/release.yml',
     )
-    releaseWorkflowFile?.addOverride(
-      'jobs.release.permissions.id-token',
-      'write',
-    )
-    releaseWorkflowFile?.addOverride('jobs.release.needs', testJob)
-    this.compileTask.reset('packemon build --loadConfigs --no-addFiles')
+    addTestJob(this.release!, releaseWorkflowFile!)
+  }
+
+  override renderWorkflowSetup(
+    options?: RenderWorkflowSetupOptions,
+  ): JobStep[] {
+    const setup = super.renderWorkflowSetup(options)
+
+    setup.push(createAwsStep())
+    return setup
   }
 })({
-  releaseToNpm: false,
   defaultReleaseBranch: 'main',
   devDeps: [
-    '@vladcos/projen-base',
-    'tsconfig-paths',
+    '@vladcos/projen-github-action',
     'fs-jetpack',
     'lodash',
     '@types/lodash',
     'type-fest',
     'ts-extras',
-    'execa@7',
+    'execa',
   ],
   name: '@vladcos/action-s3-cloudfront-smart-deploy',
-  projenrcTs: true,
-  tsconfigDev: {
-    compilerOptions: {
-      module: 'ES2022',
-      moduleResolution: TypeScriptModuleResolution.BUNDLER,
-    },
-  },
+  majorVersion: 1,
   actionMetadata: {
-    name: 'S3/Cloudfront Smart Invalidation -  save money on invalidations and maximize cache hits',
+    name: 'S3 & Cloudfront Smart Invalidation - save money and avoid unnecessary cache invalidation.',
     description:
-      'I will analyze your changed files to S3 and minimize the number of Cloudfront invalidations while maximizing cache hits',
+      'Analyze the changed files to S3 and minimize the number of Cloudfront invalidations and maximize cache hits',
     branding: {
       color: 'blue',
       icon: 'refresh-cw',
@@ -96,18 +50,22 @@ const project = new (class extends GithubAction {
       main: 'dist/index.mjs',
     },
   },
-
   releaseWorkflowSetupSteps: [
     {
       name: 'Configure AWS credentials',
-      uses: 'aws-actions/configure-aws-credentials@v2',
+      uses: 'aws-actions/configure-aws-credentials@v4',
       with: {
         'role-to-assume': '${{ vars.AWS_ROLE }}',
         'aws-region': '${{ vars.AWS_REGION }}',
       },
     },
   ],
-  entrypoint: './mjs/index.mjs',
 })
+project
+  .tryFindObjectFile('.github/workflows/build.yml')
+  ?.addOverride('jobs.build.permissions.id-token', 'write')
+project
+  .tryFindObjectFile('.github/workflows/upgrade-main.yml')
+  ?.addOverride('jobs.upgrade.permissions.id-token', 'write')
 
 project.synth()

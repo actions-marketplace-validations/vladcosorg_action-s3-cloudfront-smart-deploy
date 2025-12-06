@@ -3,20 +3,21 @@ import { getExecOutput } from '@actions/exec'
 import type { ExecOutput } from '@actions/exec'
 
 export async function runS3Sync({
-  fromLocalPath,
-  toS3Uri,
-  extraArguments = [],
+  source,
+  target,
+  // eslint-disable-next-line unicorn/prevent-abbreviations
+  s3args = [],
 }: {
-  fromLocalPath: string
-  toS3Uri: string
-  extraArguments?: string[]
+  source: string
+  target: string
+  s3args?: string[]
 }): Promise<ExecOutput> {
   return getExecOutput('aws', [
     's3',
     'sync',
-    fromLocalPath,
-    toS3Uri,
-    ...extraArguments,
+    source,
+    target,
+    ...s3args,
     '--no-progress',
     '--size-only',
   ])

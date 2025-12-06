@@ -32,25 +32,26 @@ test<TemporaryDirectoryContext>(
     directory.file('snapshot/inner/test.json')
 
     const output = await runS3Sync({
-      fromLocalPath: directory.path(),
-      toS3Uri: `s3://${bucketId}/`,
-      extraArguments: ['--dryrun'],
+      source: directory.path(),
+      target: `s3://${bucketId}/`,
+      s3args: ['--dryrun'],
     })
     await expect(
       removeVariableStringsFromSnapshot(output.stdout),
     ).toMatchFileSnapshot('./snapshots/s3sync')
   },
-  { timeout: 10_000 },
+  { timeout: 10_000, retry: 2 },
 )
 
 describe('input validation', () => {
   const defaults = {
-    [getEnvName('fromLocalPath')]: '/tmp',
-    [getEnvName('toS3Uri')]: 's3://dawd/',
-    [getEnvName('extraArguments')]: '--one --two',
+    [getEnvName('source')]: '/tmp',
+    [getEnvName('target')]: 's3://dawd/',
+    [getEnvName('s3args')]: '--one --two',
+    [getEnvName('cfargs')]: '--one --two',
     [getEnvName('invalidationStrategy')]: 'balanced',
     [getEnvName('balancedLimit')]: '6',
-    [getEnvName('distributionId')]: 'test',
+    [getEnvName('distribution')]: 'test',
   }
 
   beforeEach(() => {
@@ -64,11 +65,12 @@ describe('input validation', () => {
     Object.assign(import.meta.env, defaults)
     expect(parseInput()).toEqual({
       balancedLimit: 6,
-      distributionId: 'test',
-      extraArguments: ['--one', '--two'],
-      fromLocalPath: '/tmp',
+      distribution: 'test',
+      s3args: ['--one', '--two'],
+      cfargs: ['--one', '--two'],
+      source: '/tmp',
       invalidationStrategy: 'balanced',
-      toS3Uri: 's3://dawd/',
+      target: 's3://dawd/',
     })
   })
 
@@ -79,11 +81,14 @@ describe('input validation', () => {
   describe.each<{ field: keyof InputSchema; checks: Array<[string, unknown]> }>(
     [
       {
-        field: 'fromLocalPath',
-        checks: [['empty', ' ']],
+        field: 'source',
+        checks: [
+          ['empty', ' '],
+          ['non-existent path', '/tmp/does-not-exist'],
+        ],
       },
       {
-        field: 'toS3Uri',
+        field: 'target',
         checks: [
           ['empty', ' '],
           ['invalid prefix', 's4://'],
@@ -105,7 +110,7 @@ describe('input validation', () => {
         ],
       },
     ],
-  )('$field invalid input', ({ field, checks }) => {
+  )('$field invalid input', ({ checks, field }) => {
     test.each(checks)('%s `%s` should throw an error', (_name, value) => {
       Object.assign(import.meta.env, defaults, {
         [getEnvName(field)]: value,
@@ -119,26 +124,29 @@ describe('input validation', () => {
     checks: Array<[string, unknown, unknown]>
   }>([
     {
-      field: 'fromLocalPath',
-      checks: [['non-empty string', '/tmp', '/tmp']],
+      field: 'source',
+      checks: [
+        ['non-empty string', '/tmp', '/tmp'],
+        ['another s3', 's3://foobar/ ', 's3://foobar/'],
+      ],
     },
     {
-      field: 'toS3Uri',
+      field: 'target',
       checks: [
         ['string with prefix and suffix', ' s3://foobar/ ', 's3://foobar/'],
       ],
     },
     {
-      field: 'extraArguments',
+      field: 's3args',
       checks: [
         ['one element', 'one', ['one']],
         ['two elements', 'one two', ['one', 'two']],
-        ['empty string', ' ', []],
-        ['string with zero length', '', []],
+        ['empty string', ' ', ['--size-only']],
+        ['string with zero length', '', ['--size-only']],
       ],
     },
     {
-      field: 'distributionId',
+      field: 'distribution',
       checks: [['empty string', ' ', undefined]],
     },
     {
@@ -159,7 +167,7 @@ describe('input validation', () => {
         ['empty', ' ', 5],
       ],
     },
-  ])('$field valid input', ({ field, checks }) => {
+  ])('$field valid input', ({ checks, field }) => {
     test.each(checks)(
       '%s `%s` should validate successfuly',
       (_name, input, expected) => {

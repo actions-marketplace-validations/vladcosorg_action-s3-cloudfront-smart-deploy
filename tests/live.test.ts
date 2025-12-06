@@ -9,7 +9,7 @@ import { getOrThrow } from '@/src/util'
 import type { FSJetpack } from 'fs-jetpack/types'
 
 const bucketId = `s3://${getOrThrow(import.meta.env.VITE_BUCKET_ID)}/`
-const distributionId = getOrThrow(import.meta.env.VITE_CLOUDFRONT_ID)
+const distribution = getOrThrow(import.meta.env.VITE_CLOUDFRONT_ID)
 interface TemporaryDirectoryContext {
   directory: FSJetpack
 }
@@ -23,25 +23,27 @@ afterEach<TemporaryDirectoryContext>((context) => {
   context.directory.remove()
 })
 
-test<TemporaryDirectoryContext>('empty invalid input', async ({
-  directory,
-}) => {
-  directory.file('test1')
+test<TemporaryDirectoryContext>(
+  'empty invalid input',
+  async ({ directory }) => {
+    directory.file('test1')
 
-  directory.file('test2')
-  Object.assign(import.meta.env, {
-    [getEnvName('fromLocalPath')]: directory.path(),
-    [getEnvName('toS3Uri')]: bucketId,
-  })
+    directory.file('test2')
+    Object.assign(import.meta.env, {
+      [getEnvName('source')]: directory.path(),
+      [getEnvName('target')]: bucketId,
+    })
 
-  await run()
-  directory.file('test3')
-  Object.assign(import.meta.env, {
-    [getEnvName('fromLocalPath')]: directory.path(),
-    [getEnvName('toS3Uri')]: bucketId,
-    [getEnvName('extraArguments')]: '--dryrun',
-    [getEnvName('distributionId')]: distributionId,
-  })
+    await run()
+    directory.file('test3')
+    Object.assign(import.meta.env, {
+      [getEnvName('source')]: directory.path(),
+      [getEnvName('target')]: bucketId,
+      [getEnvName('s3args')]: '--dryrun',
+      [getEnvName('distribution')]: distribution,
+    })
 
-  await run()
-})
+    await run()
+  },
+  { timeout: 10_000, retry: 2 },
+)

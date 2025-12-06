@@ -32,14 +32,15 @@
         "CHANGELOG": "dist/changelog.md",
         "BUMPFILE": "dist/version.txt",
         "RELEASETAG": "dist/releasetag.txt",
-        "RELEASE_TAG_PREFIX": ""
+        "RELEASE_TAG_PREFIX": "",
+        "BUMP_PACKAGE": "commit-and-tag-version@^12"
       },
       "steps": [
         {
           "builtin": "release/bump-version"
         }
       ],
-      "condition": "! git log --oneline -1 | grep -q \"chore(release):\""
+      "condition": "git log --oneline -1 | grep -qv \"chore(release):\""
     },
     "clobber": {
       "name": "clobber",
@@ -108,7 +109,8 @@
       "description": "Runs eslint against the codebase",
       "steps": [
         {
-          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern src tests build-tools projenrc .projenrc.ts"
+          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern $@ src tests build-tools projenrc .projenrc.ts",
+          "receiveArgs": true
         }
       ]
     },
@@ -166,7 +168,8 @@
       "name": "release",
       "description": "Prepare a release from \"main\" branch",
       "env": {
-        "RELEASE": "true"
+        "RELEASE": "true",
+        "MAJOR": "1"
       },
       "steps": [
         {
@@ -213,7 +216,8 @@
         "CHANGELOG": "dist/changelog.md",
         "BUMPFILE": "dist/version.txt",
         "RELEASETAG": "dist/releasetag.txt",
-        "RELEASE_TAG_PREFIX": ""
+        "RELEASE_TAG_PREFIX": "",
+        "BUMP_PACKAGE": "commit-and-tag-version@^12"
       },
       "steps": [
         {
@@ -229,28 +233,13 @@
       },
       "steps": [
         {
-          "exec": "npm update npm-check-updates"
-        },
-        {
-          "exec": "npm-check-updates --dep dev --upgrade --target=minor --reject='execa'"
-        },
-        {
-          "exec": "npm-check-updates --dep optional --upgrade --target=minor --reject='execa'"
-        },
-        {
-          "exec": "npm-check-updates --dep peer --upgrade --target=minor --reject='execa'"
-        },
-        {
-          "exec": "npm-check-updates --dep prod --upgrade --target=minor --reject='execa'"
-        },
-        {
-          "exec": "npm-check-updates --dep bundle --upgrade --target=minor --reject='execa'"
+          "exec": "npx npm-check-updates@16 --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@types/lodash,@vercel/ncc,@vladcos/eslint-config,@vladcos/prettier-config,@vladcos/projen-github-action,@vladcos/tsconfig,eslint-import-resolver-typescript,execa,fs-jetpack,lodash,projen,replace-in-file,ts-extras,ts-node,type-fest,typescript,zod-to-json-schema,@actions/core,@actions/exec,zod"
         },
         {
           "exec": "npm install"
         },
         {
-          "exec": "npm update"
+          "exec": "npm update @types/lodash @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser @vercel/ncc @vladcos/eslint-config @vladcos/prettier-config @vladcos/projen-github-action @vladcos/tsconfig alias-hq babel-plugin-module-resolver commit-and-tag-version constructs eslint-import-resolver-typescript eslint execa fs-jetpack lodash packemon prettier projen replace-in-file ts-extras ts-node tsconfig-paths tsx type-fest typescript vite-tsconfig-paths vitest zod-to-json-schema @actions/core @actions/exec @actions/github zod"
         },
         {
           "exec": "npx projen"

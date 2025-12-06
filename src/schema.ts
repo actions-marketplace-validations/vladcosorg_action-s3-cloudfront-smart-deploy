@@ -11,22 +11,13 @@ export enum InvalidationStrategy {
   PRECISE = 'precise',
 }
 
-export const inputSchemaValidator = z.object({
-  fromLocalPath: z
-    .string()
-    .trim()
-    .min(1)
-    .describe('nooo')
-    .refine(
-      (value) => fs.existsSync(path.resolve(value)),
-      (value) => ({ message: `The path '${value}' does not exist` }),
-    ),
-  toS3Uri: z.string().trim().min(7).startsWith('s3://').endsWith('/'),
-  extraArguments: z
-    .string()
-    .trim()
-    .optional()
+function getArgumentValidation(defaultValue?: string) {
+  const validator = z.string().optional()
+
+  return validator
     .transform((value) => {
+      value ??= defaultValue
+
       if (!value || value.length === 0) {
         return []
       }
@@ -36,16 +27,48 @@ export const inputSchemaValidator = z.object({
         .map((item) => item.trim())
         .filter((item) => item.length)
     })
-    .pipe(z.string().array()),
-  distributionId: z.string().optional(),
+    .pipe(z.string().array())
+}
+
+export const inputSchemaValidator = z.object({
+  source: z.union([
+    z
+      .string()
+      .trim()
+      .min(1)
+      .describe('Path to sync the files from')
+      .refine(
+        (value) => fs.existsSync(path.resolve(value)),
+        (value) => ({ message: `The path '${value}' does not exist` }),
+      ),
+    z.string().trim().min(7).startsWith('s3://').endsWith('/'),
+  ]),
+  target: z
+    .string()
+    .trim()
+    .min(7)
+    .startsWith('s3://')
+    .endsWith('/')
+    .describe('Target s3 bucket to sync to'),
+  s3args: getArgumentValidation('--size-only').describe(
+    'Additional arguments from https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html',
+  ),
+  cfargs: getArgumentValidation().describe(
+    'Additional arguments from https://docs.aws.amazon.com/cli/latest/reference/cloudfront/create-invalidation.html',
+  ),
+  distribution: z.string().optional().describe('Cloudfront distribution ID'),
   invalidationStrategy: z
     .nativeEnum(InvalidationStrategy)
     .default(InvalidationStrategy.BALANCED)
+    .describe(' Available values: `BALANCED`, `PRECISE`, `FRUGAL`'),
+  balancedLimit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5)
     .describe(
-      ' The balanced strategy will attempt to use the maximize-precision approach unless there are [limit] or more targets. \n' +
-        'In that case it will switch to the minimize-invalidations strategy.',
+      'Maximum amount of invalidation requests when using `BALANCED` strategy',
     ),
-  balancedLimit: z.coerce.number().int().positive().default(5),
 })
 
 export type InputSchema = z.infer<typeof inputSchemaValidator>

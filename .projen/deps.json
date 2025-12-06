@@ -1,30 +1,22 @@
 {
   "dependencies": [
     {
-      "name": "@bleed-believer/path-alias",
-      "type": "build"
-    },
-    {
-      "name": "@swc/core",
-      "type": "build"
-    },
-    {
       "name": "@types/lodash",
       "type": "build"
     },
     {
       "name": "@types/node",
-      "version": "^16",
+      "version": "^18",
       "type": "build"
     },
     {
       "name": "@typescript-eslint/eslint-plugin",
-      "version": "^5",
+      "version": "^7",
       "type": "build"
     },
     {
       "name": "@typescript-eslint/parser",
-      "version": "^5",
+      "version": "^7",
       "type": "build"
     },
     {
@@ -40,7 +32,7 @@
       "type": "build"
     },
     {
-      "name": "@vladcos/projen-base",
+      "name": "@vladcos/projen-github-action",
       "type": "build"
     },
     {
@@ -49,26 +41,26 @@
     },
     {
       "name": "alias-hq",
+      "version": "^6",
       "type": "build"
     },
     {
       "name": "babel-plugin-module-resolver",
+      "version": "^5",
       "type": "build"
     },
     {
-      "name": "eslint-config-prettier",
+      "name": "commit-and-tag-version",
+      "version": "^12",
       "type": "build"
     },
     {
-      "name": "eslint-import-resolver-node",
+      "name": "constructs",
+      "version": "^10.0.0",
       "type": "build"
     },
     {
       "name": "eslint-import-resolver-typescript",
-      "type": "build"
-    },
-    {
-      "name": "eslint-plugin-import",
       "type": "build"
     },
     {
@@ -78,7 +70,6 @@
     },
     {
       "name": "execa",
-      "version": "7",
       "type": "build"
     },
     {
@@ -90,16 +81,13 @@
       "type": "build"
     },
     {
-      "name": "npm-check-updates",
-      "version": "^16",
-      "type": "build"
-    },
-    {
       "name": "packemon",
+      "version": "^3",
       "type": "build"
     },
     {
       "name": "prettier",
+      "version": "^3",
       "type": "build"
     },
     {
@@ -107,8 +95,7 @@
       "type": "build"
     },
     {
-      "name": "standard-version",
-      "version": "^9",
+      "name": "replace-in-file",
       "type": "build"
     },
     {
@@ -121,10 +108,12 @@
     },
     {
       "name": "tsconfig-paths",
+      "version": "^4",
       "type": "build"
     },
     {
       "name": "tsx",
+      "version": "^4",
       "type": "build"
     },
     {
@@ -137,10 +126,16 @@
     },
     {
       "name": "vite-tsconfig-paths",
+      "version": "4",
       "type": "build"
     },
     {
       "name": "vitest",
+      "version": "^1",
+      "type": "build"
+    },
+    {
+      "name": "zod-to-json-schema",
       "type": "build"
     },
     {
@@ -153,6 +148,7 @@
     },
     {
       "name": "@actions/github",
+      "version": "6",
       "type": "runtime"
     },
     {
